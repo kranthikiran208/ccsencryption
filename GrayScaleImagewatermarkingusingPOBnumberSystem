@@ -1,0 +1,426 @@
+from cv2.cv2 import *
+from numpy import *
+
+
+def ctoi(n):
+    return int(n)
+
+
+def itoc(n):
+    return str(n)
+
+
+def join_string(n):
+    v = ''
+    for i7 in range(len(n)):
+        v = v + n[i7]
+    return v
+
+
+def ncr(n, r):
+    p1 = 1
+    k1 = 1
+    if n < r or n == 0:
+        return 0
+    else:
+        if n - r < r:
+            r = n - r
+        if r != 0:
+            while r:
+                p1 *= n
+                k1 *= r
+                m = gcd(p1, k1)
+                p1 //= m
+                k1 //= m
+                n -= 1
+                r -= 1
+        else:
+            p1 = 1
+        return p1
+
+
+def pob_num(arr):
+    arr = arr[::-1]
+    num = 0
+    for i4 in range(1, len(arr)):
+        m = 0
+        if arr[i4] == 1:
+            m = ncr(i4, sum(arr[0:i4 + 1]))
+        num += m
+    return num
+
+
+def pob(n, r, v):
+    B = zeros([n], dtype=uint8)
+    t = r
+    temp = v
+    for i5 in range(n - 1, 0, -1):
+        r2 = ncr(i5, t)
+        if r2 <= temp:
+            temp -= r2
+            t -= 1
+            B[i5] = 1
+    if t != 0:
+        B[0] = 1
+    return B[::-1]
+
+
+def enc_img(im):
+    p = im.flatten()
+    imshow('Original Image', im)
+
+    N0 = 10
+    u = 9.999
+    w = zeros(len(p) + N0, dtype=float64)
+    w[0] = 0.35
+    for i6 in range(1, len(p) + N0):
+        w[i6] = cos((u + 1) * arccos(w[i6 - 1])) * (2 ** 14) - floor(cos((u + 1) * arccos(w[i6 - 1])) * (2 ** 14))
+
+    x11 = w[N0:]
+    x22 = array(sorted(x11))
+    x33 = zeros(len(x22), dtype=uint32)
+
+    for i6 in range(len(x22)):
+        x33[i6] = where(x11 == x22[i6])[0][0]
+
+    d = zeros(len(x11), dtype=uint32)
+    for i6 in range(len(x11)):
+        d[i6] = floor(x11[i6] * (10 ** 14)) % 256
+
+    p1 = zeros(len(p), dtype=uint32)
+    for i6 in range(len(p)):
+        p1[i6] = p[x33[i6]]
+
+    c = zeros(len(p), dtype=uint32)
+    for i6 in range(len(p)):
+        y = int(mod(p1[i6] + d[i6], 256))
+        if i6 == 0:
+            c[i6] = y ^ 187
+        else:
+            c[i6] = y ^ int(c[i6 - 1])
+
+    lp = 87
+    t = zeros(len(p1), dtype=uint32)
+
+    for i6 in range(len(p1)):
+        if i6 - lp >= 1:
+            t[i6 - lp - 1] = c[i6]
+        else:
+            t[(i6 - lp) + len(p1) - 1] = c[i6]
+
+    im1 = reshape(t, (-1, 256))
+    return im1
+
+
+def arr2blocks(arr, nrows, ncols):
+    h, w = arr.shape
+    return arr.reshape(h // nrows, nrows, -1, ncols).swapaxes(1, 2).reshape(-1, nrows, ncols)
+
+
+def blocks2arr(arr, h, w):
+    n, nrows, ncols = arr.shape
+    return arr.reshape(h // nrows, -1, nrows, ncols).swapaxes(1, 2).reshape(h, w)
+
+
+def udlr_b(z):
+    y = zeros([16384, 2, 2], dtype=uint8)
+    for i1 in range(16384):
+        if 128 <= i1 <= 16255:
+            if i1 % 128 != 0 and i1 % 128 != 127:
+                a1 = z[i1 + 128]
+                b1 = z[i1 - 128]
+                u1 = z[i1 + 1]
+                d1 = z[i1 - 1]
+                y[i1] = [[(a1[0][0] ^ b1[0][0] ^ u1[0][0] ^ d1[0][0]), (a1[0][1] ^ b1[0][1] ^ u1[0][1] ^ d1[0][1])],
+                         [(a1[1][0] ^ b1[1][0] ^ u1[1][0] ^ d1[1][0]), (a1[1][1] ^ b1[1][1] ^ u1[1][1] ^ d1[1][1])]]
+            elif i1 % 128 == 0:
+                a1 = z[i1 + 128]
+                b1 = z[i1 - 128]
+                u1 = z[i1 + 1]
+                y[i1] = [[(a1[0][0] ^ b1[0][0] ^ u1[0][0]), (a1[0][1] ^ b1[0][1] ^ u1[0][1])],
+                         [(a1[1][0] ^ b1[1][0] ^ u1[1][0]), (a1[1][1] ^ b1[1][1] ^ u1[1][1])]]
+            elif i1 % 128 == 127:
+                a1 = z[i1 + 128]
+                b1 = z[i1 - 128]
+                u1 = z[i1 - 1]
+                y[i1] = [[(a1[0][0] ^ b1[0][0] ^ u1[0][0]), (a1[0][1] ^ b1[0][1] ^ u1[0][1])],
+                         [(a1[1][0] ^ b1[1][0] ^ u1[1][0]), (a1[1][1] ^ b1[1][1] ^ u1[1][1])]]
+        elif 0 <= i1 <= 127:
+            if i1 != 0 and i1 != 127:
+                a1 = z[i1 + 128]
+                b1 = z[i1 - 1]
+                u1 = z[i1 + 1]
+                y[i1] = [[(a1[0][0] ^ b1[0][0] ^ u1[0][0]), (a1[0][1] ^ b1[0][1] ^ u1[0][1])],
+                         [(a1[1][0] ^ b1[1][0] ^ u1[1][0]), (a1[1][1] ^ b1[1][1] ^ u1[1][1])]]
+            elif i1 == 0:
+                a1 = z[128]
+                b1 = z[1]
+                y[i1] = [[(a1[0][0] ^ b1[0][0]), (a1[0][1] ^ b1[0][1])], [(a1[1][0] ^ b1[1][0]), (a1[1][1] ^ b1[1][1])]]
+            elif i1 == 127:
+                a1 = z[i1 + 128]
+                b1 = z[126]
+                y[i1] = [[(a1[0][0] ^ b1[0][0]), (a1[0][1] ^ b1[0][1])], [(a1[1][0] ^ b1[1][0]), (a1[1][1] ^ b1[1][1])]]
+        elif 16256 <= i1 <= 16383:
+            if i1 != 16256 and i1 != 16383:
+                a1 = z[i1 - 128]
+                b1 = z[i1 - 1] ^ z[i1 + 1]
+                y[i1] = [[(a1[0][0] ^ b1[0][0]), (a1[0][1] ^ b1[0][1])], [(a1[1][0] ^ b1[1][0]), (a1[1][1] ^ b1[1][1])]]
+            elif i1 == 16256:
+                a1 = z[i1 - 128]
+                b1 = z[16257]
+                y[i1] = [[(a1[0][0] ^ b1[0][0]), (a1[0][1] ^ b1[0][1])], [(a1[1][0] ^ b1[1][0]), (a1[1][1] ^ b1[1][1])]]
+            elif i1 == 16383:
+                a1 = z[i1 - 128]
+                b1 = z[16382]
+                y[i1] = [[(a1[0][0] ^ b1[0][0]), (a1[0][1] ^ b1[0][1])], [(a1[1][0] ^ b1[1][0]), (a1[1][1] ^ b1[1][1])]]
+    return y
+
+
+def two_bb1(o1, o2, o3):
+    z1 = zeros([16384, 2, 2], dtype=uint16)
+    z2 = zeros([16384, 2, 2], dtype=uint16)
+    for i3 in range(16384):
+        g1 = o1[i3]
+        g2 = o2[i3]
+        g3 = o3[i3]
+        for j in range(2):
+            for k in range(2):
+                k1 = g1[j][k]
+                k2 = g2[j][k]
+                k3 = g3[j][k]
+                j1 = bin(k1).lstrip("0b").zfill(5)
+                j2 = bin(k2).lstrip("0b").zfill(5)
+                j3 = bin(k3).lstrip("0b").zfill(3)
+                v1 = j1 + j2[0:2] + j3
+                v2 = list(v1)
+                v3 = list(map(ctoi, v2))
+                v4 = pob_num(v3)
+                v5 = sum(v3)
+                z1[i3][j][k] = v4
+                z2[i3][j][k] = v5
+    return z1, z2
+
+
+def two_bb2(o1, o2, o3):
+    z1 = zeros([16384, 2, 2], dtype=uint16)
+    z2 = zeros([16384, 2, 2], dtype=uint16)
+    for i3 in range(16384):
+        g1 = o1[i3]
+        g2 = o2[i3]
+        g3 = o3[i3]
+        for j in range(2):
+            for k in range(2):
+                k1 = g1[j][k]
+                k2 = g2[j][k]
+                k3 = g3[j][k]
+                j1 = bin(k1).lstrip("0b").zfill(3)
+                j2 = bin(k2).lstrip("0b").zfill(3)
+                j3 = bin(k3).lstrip("0b").zfill(5)
+                v1 = j1 + j2[0:2] + j3
+                v2 = list(v1)
+                v3 = list(map(ctoi, v2))
+                v4 = pob_num(v3)
+                v5 = sum(v3)
+                z1[i3][j][k] = v4
+                z2[i3][j][k] = v5
+    return z1, z2
+
+
+def r_pobmsb(a1, a2):
+    hc1 = []
+    hc2 = []
+    hc3 = []
+
+    for i8 in range(256):
+        for j in range(256):
+            m1 = a1[i8][j]
+            m2 = a2[i8][j]
+            l1 = pob(10, m1, m2)
+            l2 = list(map(itoc, l1))
+            l3 = join_string(l2)
+            b1 = l3[0:5]
+            b2 = l3[5:7]
+            b3 = l3[7:]
+            hc1.append(b1)
+            hc2.append(b2)
+            hc3.append(b3)
+    return hc1, hc2, hc3
+
+
+def r_poblsb(a1, a2):
+    hc1 = []
+    hc2 = []
+    hc3 = []
+
+    for i8 in range(256):
+        for j in range(256):
+            m1 = a1[i8][j]
+            m2 = a2[i8][j]
+            l1 = pob(10, m1, m2)
+            l2 = list(map(itoc, l1))
+            l3 = join_string(l2)
+            b1 = l3[0:3]
+            b2 = l3[3:5]
+            b3 = l3[5:]
+            hc1.append(b1)
+            hc2.append(b2)
+            hc3.append(b3)
+    return hc1, hc2, hc3
+
+
+def join_ml(v1, v2):
+    v3 = zeros([65536], dtype=uint8)
+    for i10 in range(65536):
+        v = v1[i10] + v2[i10]
+        v4 = int("0b" + v, 2)
+        v3[i10] = v4
+    return v3
+
+
+def dec_img(im):
+    t = im.flatten()
+
+    lp = 87
+    c = zeros(len(t), dtype=uint32)
+
+    for i6 in range(len(t)):
+        if i6 - lp >= 1:
+            c[i6] = t[i6 - lp - 1]
+        else:
+            c[i6] = t[(i6 - lp) + len(t) - 1]
+
+    y1 = zeros(len(t), dtype=uint32)
+    for i6 in range(len(t)):
+        if i6 == 0:
+            y1[i6] = int(c[i6]) ^ 187
+        else:
+            y1[i6] = int(c[i6]) ^ int(c[i6 - 1])
+
+    N0 = 10
+    u = 9.999
+    w = zeros(len(t) + N0, dtype=float64)
+    w[0] = 0.35
+    for i6 in range(1, len(t) + N0):
+        w[i6] = cos((u + 1) * arccos(w[i6 - 1])) * (2 ** 14) - floor(cos((u + 1) * arccos(w[i6 - 1])) * (2 ** 14))
+
+    x11 = w[N0:]
+    x22 = array(sorted(x11))
+    x33 = zeros(len(x22), dtype=uint32)
+
+    for i6 in range(len(x22)):
+        x33[i6] = where(x11 == x22[i6])[0][0]
+
+    d = zeros(len(x11), dtype=uint32)
+    for i6 in range(len(x11)):
+        d[i6] = floor(x11[i6] * (10 ** 14)) % 256
+
+    p1 = zeros(len(t), dtype=uint64)
+    for i6 in range(len(t)):
+        if y1[i6] - d[i6] > 0:
+            p1[i6] = mod(y1[i6] - d[i6], 256)
+        else:
+            p1[i6] = mod(d[i6] - y1[i6], 256)
+
+    p = zeros(len(t), dtype=uint32)
+    for i6 in range(len(p1)):
+        p[x33[i6]] = p1[i6]
+
+    im1 = reshape(p, (-1, 256))
+    return im1
+
+
+if __name__ == "__main__":
+    img = imread(r"C:\Users\krant\Downloads\Documents\ImageEncryptionGUI\lena.jpg", 0)
+
+    img2 = enc_img(img)
+    imshow('Encrypted Image', uint8(img2))
+
+    c1 = img2.flatten()
+    c2 = zeros(65536, dtype=uint8)
+    c3 = zeros(65536, dtype=uint8)
+    c4 = zeros(65536, dtype=uint8)
+    c5 = zeros(65536, dtype=uint8)
+
+    cd1 = []
+    cd2 = []
+
+    for i in range(65536):
+        number = c1[i]
+        x = format(number, '08b')
+
+        x1 = x[0:5]
+        x2 = int(x1, 2)
+        c2[i] = x2
+        cd1.append(x1)
+
+        x3 = x1 + "000"
+        x4 = int(x3, 2)
+        c3[i] = x4
+
+        x5 = x[5:8]
+        x6 = int(x5, 2)
+        c4[i] = x6
+        cd2.append(x5)
+
+        x7 = x5 + "00000"
+        x8 = int(x7, 2)
+        c5[i] = x8
+
+    img4 = reshape(c3, (-1, 256))
+    img20 = reshape(c3, (-1, 256))
+    imshow('MSB Encrypted Image Share', uint8(img4))
+
+    img5 = reshape(c5, (-1, 256))
+    imshow('LSB Encrypted Image Share', uint8(img5))
+
+    img6 = reshape(c2, (-1, 256))
+    #imshow('Image Share 1 MSB', uint8(img6))
+
+    img7 = reshape(c4, (-1, 256))
+    #imshow('Image Share 2 LSB', uint8(img7))
+
+    c6 = arr2blocks(array(img6), 2, 2)  # Recovery Watermark #5bit
+    c7 = arr2blocks(array(img7), 2, 2)  # 3bit
+
+    c8 = udlr_b(c6)
+    c9 = udlr_b(c7)
+
+    c10, c14 = two_bb1(c6, c8, c7)
+    c11, c15 = two_bb2(c7, c9, c6)
+
+    c12 = blocks2arr(c10, 256, 256)
+    c13 = blocks2arr(c11, 256, 256)
+
+    c16 = blocks2arr(c14, 256, 256)
+    c17 = blocks2arr(c15, 256, 256)
+
+    img8 = reshape(c12, (-1, 256))
+    imshow('MSB Embedded Share', uint8(img8))
+
+    img9 = reshape(c13, (-1, 256))
+    imshow('LSB Embedded Share', uint8(img9))
+
+    f1, f2, f3 = r_pobmsb(c16, c12)
+    e1, e2, e3 = r_poblsb(c17, c13)
+
+    if f1 == e3 and cd1 == e3:
+        if f3 == e1 and cd2 == e1:
+            print(True)
+            r1 = join_ml(f1, f3)
+            img10 = reshape(r1, (-1, 256))
+            imshow("Reconstructed Encrypted", uint8(img10))
+            if img2.all() == img10.all():
+                print(True)
+            e1 = list(img2.flatten())
+            e2 = list(img10.flatten())
+            if e1 == e2:
+                print(True)
+            img11 = dec_img(img10)
+            imshow('Decrypted Image', uint8(img11))
+            if img.all() == img11.all():
+                print(True)
+            e3 = list(img.flatten())
+            e4 = list(img11.flatten())
+            if e3 == e4:
+                print(True)
+    waitKey(0)
