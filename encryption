@@ -1,0 +1,46 @@
+def enc_img(im):
+    p = im.flatten()    #converting to 1D
+    imshow('Original Image', im)
+
+
+    N0 = 10   #Secret Key
+    u = 9.999
+    w = zeros(len(p) + N0, dtype=float64)
+    w[0] = 0.35   
+    for i6 in range(1, len(p) + N0):
+        w[i6] = cos((u + 1) * arccos(w[i6 - 1])) * (2 ** 14) - floor(cos((u + 1) * arccos(w[i6 - 1])) * (2 ** 14)) #CCS Combination Equation
+
+    x11 = w[N0:]  #Generated random key array
+    x22 = array(sorted(x11)) #sorted the generated key array
+    x33 = zeros(len(x22), dtype=uint32)
+
+    for i6 in range(len(x22)):
+        x33[i6] = where(x11 == x22[i6])[0][0]  
+
+    d = zeros(len(x11), dtype=uint32)
+    for i6 in range(len(x11)):
+        d[i6] = floor(x11[i6] * (10 ** 14)) % 256  #Diffusion Matrix array
+
+    p1 = zeros(len(p), dtype=uint32)  #permutation array
+    for i6 in range(len(p)):
+        p1[i6] = p[x33[i6]] #Permutation Equation
+
+    c = zeros(len(p), dtype=uint32) #Encrypted image pixel matrix
+    for i6 in range(len(p)):
+        y = int(mod(p1[i6] + d[i6], 256)) #Diffusion Equation 
+        if i6 == 0:
+            c[i6] = y ^ 187
+        else:
+            c[i6] = y ^ int(c[i6 - 1])
+
+    lp = 87 #security key
+    t = zeros(len(p1), dtype=uint32) #New Encrypted image pixel matrix
+
+    for i6 in range(len(p1)):
+        if i6 - lp >= 1:
+            t[i6 - lp - 1] = c[i6]    
+        else:
+            t[(i6 - lp) + len(p1) - 1] = c[i6]
+
+    im1 = reshape(t, (-1, 256))
+    return im1
